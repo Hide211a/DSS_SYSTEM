@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { getApiBase } from '../lib/apiBase';
 
 interface AuthContextValue {
   token: string | null;
@@ -22,12 +23,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => sessionStorage.getItem(STORAGE_KEY));
 
   const login = useCallback(async (username: string, password: string) => {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch(`${getApiBase()}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
-    const data = await res.json();
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
     if (!res.ok) throw new Error(data.error || 'Помилка входу');
     setToken(data.token);
     sessionStorage.setItem(STORAGE_KEY, data.token);

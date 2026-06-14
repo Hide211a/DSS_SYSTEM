@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { getApiBase } from '../lib/apiBase';
 
 export interface CustomerUser {
   id: string;
@@ -49,23 +50,25 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch('/api/customer/login', {
+    const res = await fetch(`${getApiBase()}/customer/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    const data = await res.json();
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
     if (!res.ok) throw new Error(typeof data.error === 'string' ? data.error : 'Помилка входу');
     persist(data.token, data.user);
   }, [persist]);
 
   const register = useCallback(async (email: string, password: string, name?: string) => {
-    const res = await fetch('/api/customer/register', {
+    const res = await fetch(`${getApiBase()}/customer/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name }),
     });
-    const data = await res.json();
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
     if (!res.ok) throw new Error(typeof data.error === 'string' ? data.error : 'Помилка реєстрації');
     persist(data.token, data.user);
   }, [persist]);
@@ -80,7 +83,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = useCallback(async () => {
     const t = localStorage.getItem(STORAGE_KEY);
     if (!t) return;
-    const res = await fetch('/api/customer/me', {
+    const res = await fetch(`${getApiBase()}/customer/me`, {
       headers: { Authorization: `Bearer ${t}` },
     });
     if (!res.ok) return;
