@@ -1,4 +1,4 @@
-# Build context must be REPO ROOT: docker build -f backend/Dockerfile .
+# Railway / Docker: build from REPO ROOT (not backend/ subfolder).
 FROM node:22-alpine AS build
 WORKDIR /app
 
@@ -40,5 +40,8 @@ COPY backend/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 3001
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:${PORT}/api/health || exit 1
+
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["node", "dist/index.js"]

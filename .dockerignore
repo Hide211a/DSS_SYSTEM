@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.env
+.env.*
+*.db
+*.db-journal
+frontend/public
+coverage
+.vite
+**/*.test.ts
+**/*.test.tsx
+PROJECT_AUDIT.md
+THESIS.md
+DEPLOY.md
