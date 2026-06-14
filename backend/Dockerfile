@@ -1,42 +1,37 @@
-# Build context must be REPO ROOT: docker build -f backend/Dockerfile .
+# Build context: backend/ (Railway default for backend service)
 FROM node:22-alpine AS build
 WORKDIR /app
 
 RUN apk add --no-cache openssl libc6-compat
 
-COPY package.json package-lock.json ./
-COPY backend/package.json ./backend/
-COPY frontend/package.json ./frontend/
+COPY package.json ./
+RUN npm install
 
-RUN npm ci -w backend --include-workspace-root
+COPY prisma ./prisma
+COPY src ./src
+COPY scripts ./scripts
+COPY tsconfig.json vitest.config.ts ./
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
-COPY backend ./backend
-
-WORKDIR /app/backend
 RUN cp prisma/schema.postgres.prisma prisma/schema.prisma
 RUN npx prisma generate
 RUN npm run build
 
 FROM node:22-alpine
-WORKDIR /app/backend
+WORKDIR /app
 
 RUN apk add --no-cache openssl libc6-compat
 
 ENV NODE_ENV=production
 ENV PORT=3001
 
-COPY --from=build /app/node_modules /app/node_modules
-COPY --from=build /app/backend/package.json ./
-COPY --from=build /app/backend/dist ./dist
-COPY --from=build /app/backend/src ./src
-COPY --from=build /app/backend/prisma ./prisma
-COPY --from=build /app/backend/scripts ./scripts
-COPY --from=build /app/backend/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/backend/node_modules/@prisma ./node_modules/@prisma
-
-RUN npm install prisma@6.8.2 tsx@4.19.4 --omit=dev --no-save
-
-COPY backend/docker-entrypoint.sh /docker-entrypoint.sh
+COPY --from=build /app/package.json ./
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/src ./src
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/scripts ./scripts
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 3001
