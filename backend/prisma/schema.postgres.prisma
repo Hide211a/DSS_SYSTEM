@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+}
+
+model Product {
+  id              String             @id @default(cuid())
+  sku             String             @unique
+  name            String
+  description     String
+  price           Float
+  imageUrl        String?
+  categoryId      String
+  category        Category           @relation(fields: [categoryId], references: [id])
+  leadTimeDays    Int                @default(7)
+  minOrderQty     Int                @default(10)
+  unitCost        Float
+  isActive        Boolean            @default(true)
+  inventory       InventoryItem?
+  orderItems      OrderItem[]
+  stockMovements  StockMovement[]
+  purchaseOrders  PurchaseOrder[]
+  dssParams       ProductDssParams?
+  specs           ProductSpec[]
+  reviews         Review[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model Warehouse {
+  id              String          @id @default(cuid())
+  name            String
+  code            String          @unique
+  location        String?
+  inventoryItems  InventoryItem[]
+  stockMovements  StockMovement[]
+  createdAt       DateTime        @default(now())
+}
+
+model InventoryItem {
+  id            String    @id @default(cuid())
+  productId     String    @unique
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId   String
+  warehouse     Warehouse @relation(fields: [warehouseId], references: [id])
+  quantity      Int       @default(0)
+  reservedQty   Int       @default(0)
+  updatedAt     DateTime  @updatedAt
+}
+
+model StockMovement {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  type        String
+  quantity    Int
+  reference   String?
+  note        String?
+  createdAt   DateTime  @default(now())
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  status        String      @default("PENDING")
+  total         Float
+  customerName  String?
+  customerEmail String?
+  userId        String?
+  user          User?       @relation(fields: [userId], references: [id])
+  paymentMethod String?
+  paidAt        DateTime?
+  items         OrderItem[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  orders    Order[]
+  reviews   Review[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductSpec {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  value     String
+  sortOrder Int     @default(0)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, userId])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+}
+
+model PurchaseOrder {
+  id          String    @id @default(cuid())
+  poNumber    String    @unique
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  quantity    Int
+  unitCost    Float
+  status      String    @default("DRAFT")
+  note        String?
+  createdAt   DateTime  @default(now())
+  receivedAt  DateTime?
+}
+
+model ProductDssParams {
+  id                  String  @id @default(cuid())
+  productId           String  @unique
+  product             Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  serviceLevel        Float   @default(0.95)
+  safetyStockDays     Float   @default(3)
+  forecastHorizonDays Int     @default(30)
+  zScore              Float   @default(1.65)
+}
+
+model DssSnapshot {
+  id        String   @id @default(cuid())
+  payload   String
+  createdAt DateTime @default(now())
+}
+
+model DssCache {
+  id        String   @id @default("global")
+  payload   String
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
+}
